@@ -58,13 +58,13 @@ class TransactionController extends Controller
      * Display a listing of the resource.
      */
 
-    public function exportToExcel($cashOut = 1)
+    public function exportToExcel($cashOut = '1')
     {
         $transaction = Transaction::where('cash_out', $cashOut);
 
         $fileName = 'cash-in.xlsx';
 
-        if ($cashOut) {
+        if ($cashOut == '1') {
             $transaction = $transaction->with(['purposable' => function (MorphTo $morphTo) {
                 $morphTo->constrain([
                     BudgetDetail::class => function ($query) {
