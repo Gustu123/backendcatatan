@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Budget;
 use App\Models\BudgetDetail;
 use App\Models\User;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 
 class BudgetController extends Controller
 {
@@ -18,12 +19,16 @@ class BudgetController extends Controller
 
         // return response()->json(["data"=> $budgets]);
 
+        // $query = Budget::with(['details' => function (Builder $query){
+        //     $query->transaction->sum('amount');
+        // }])->where('user_id', $request->user()->id);
+
         $query =  Budget::with('details')->where('user_id', $request->user()->id);
         if ($request->year) {
-            $query = $query->whereYear('created_at', $request->year);
+            $query = $query->whereYear('expride_date', $request->year);
         }
         if ($request->month) {
-            $query = $query->whereMonth('created_at', $request->month);
+            $query = $query->whereMonth('expride_date', $request->month);
         }
         if ($request->search) {
             $query = $query->where('name', 'like', "%{$request->search}%");
@@ -79,7 +84,9 @@ class BudgetController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $budget = Budget::find($id);
+
+        return response()->json(["data" => $budget]);
     }
 
     /**

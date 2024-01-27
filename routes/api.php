@@ -35,15 +35,15 @@ Route::post('/forgot-password', [UserController::class, 'forgotPassword']);
 Route::post('/update-password', [UserController::class, 'updatePassword']);
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::resource('wallet', WalletController::class)->only(['index', 'store', 'destroy']);
-    Route::resource('debt', DebtController::class)->only(['index', 'store', 'destroy']);
-    Route::resource('budget', BudgetController::class)->only(['index', 'store', 'destroy']);
+    Route::resource('wallet', WalletController::class)->only(['index', 'store', 'destroy', 'show']);
+    Route::resource('debt', DebtController::class)->only(['index', 'store', 'destroy', 'show']);
+    Route::resource('budget', BudgetController::class)->only(['index', 'store', 'destroy', 'show']);
     Route::resource('budgetdetail', BudgetDetailController::class)->only(['index']);
-    Route::post('/update-password', [UserController::class, 'updatePassword']);
+    // Route::post('/update-password', [UserController::class, 'updatePassword']);
     Route::get('/transaction/dashboard', [TransactionController::class, 'persentase']);
-    Route::get('/user', [UserController::class, 'show']);
-    Route::get('/transaction/excel', [TransactionController::class, 'exportToExcel']);
-    Route::get('/transaction/pdf', [TransactionController::class, 'exportToPdf']);
+    Route::get('/user/{id}', [UserController::class, 'show']);
+    Route::get('/transaction/excel/{cashout?}', [TransactionController::class, 'exportToExcel']);
+    Route::get('/transaction/pdf/{cashout?}', [TransactionController::class, 'exportToPdf']);
     Route::resource('transaction', TransactionController::class)->only(['index', 'store', 'destroy', 'show', ]);
 });
 

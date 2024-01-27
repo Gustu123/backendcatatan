@@ -53,10 +53,15 @@ class UserController extends Controller
 
         return response()->json();
     }
+    
     public function show(string $id)
     {
-        $transaction = User::find($id);
+        $user = User::find($id);
 
-        return $transaction;
+        return response()->json([
+            "data" => [
+                "user" => $user
+            ]
+        ]);
     }
 }

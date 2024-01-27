@@ -58,9 +58,9 @@ class TransactionController extends Controller
      * Display a listing of the resource.
      */
 
-    public function exportToExcel($cashOut = 1)
+    public function exportToExcel(Request $request, $cashOut = 1)
     {
-        $transaction = Transaction::where('cash_out', $cashOut);
+        $transaction = Transaction::where('cash_out', $cashOut)->where('user_id', $request->user()->id);
 
         $fileName = 'cash-in.xlsx';
 
@@ -68,32 +68,35 @@ class TransactionController extends Controller
             $transaction = $transaction->with(['purposable' => function (MorphTo $morphTo) {
                 $morphTo->constrain([
                     BudgetDetail::class => function ($query) {
-                        $query->select(['id','budget_id','name'])->with('budget:id,name');
+                        $query->select(['id', 'budget_id', 'name'])->with('budget:id,name');
                     },
                     Debt::class => function ($query) {
-                        $query->select(['id','name']);
+                        $query->select(['id', 'name']);
                     }
                 ]);
             }]);
 
             $fileName = 'cash-out.xlsx';
         }
-
-        $transaction = $transaction->get();
+        $transaction = $transaction->select(['id', 'name', 'deskripsi', 'amount', 'purposable_id', 'purposable_type'])->get();
+        // $totalAmount = $transaction->sum('amount');
 
         return (new FastExcel($transaction))->download($fileName, function ($transaction) {
             return [
                 'name' => $transaction->name,
-                'description' => $transaction->description,
-                'amount' => $transaction->amount
-                // 'purposable' => $transaction->purposable->?
+                'description' => $transaction->deskripsi,
+                'amount' => $transaction->amount,
+                'purposable' => $transaction->purposable->name ?? '-',
+                'Jumlah' => $transaction->sum('amount')
+               
             ];
         });
     }
 
-    public function exportToPdf($cashOut = 1)
+    public function exportToPdf(Request $request, $cashOut = 1)
     {
-        $transaction = Transaction::where('cash_out', $cashOut);
+        $transaction = Transaction::where('cash_out', $cashOut)->where('user_id', $request->user()->id);
+        $title = 'Laporan Uang Masuk';
 
         $fileName = 'cash-in.pdf';
 
@@ -101,19 +104,28 @@ class TransactionController extends Controller
             $transaction = $transaction->with(['purposable' => function (MorphTo $morphTo) {
                 $morphTo->constrain([
                     BudgetDetail::class => function ($query) {
-                        $query->select(['id','budget_id','name'])->with('budget:id,name');
+                        $query->select(['id', 'budget_id', 'name'])->with('budget:id,name');
                     },
                     Debt::class => function ($query) {
-                        $query->select(['id','name']);
+                        $query->select(['id', 'name']);
                     }
                 ]);
             }]);
 
+            $title = 'Laporan Uang Keluar';
             $fileName = 'cash-out.pdf';
         }
 
-        $transaction = $transaction->select(['id','name','deskripsi','amount','purposable_id','purposable_type'])->get();
-        return $transaction;
+        $transactions = $transaction->select(['id', 'name', 'deskripsi', 'amount', 'purposable_id', 'purposable_type'])->get();
+        $totalAmount = $transaction->sum('amount');
+
+        $data = [
+            'transactions' => $transactions,
+            'totalAmount' => $totalAmount,
+            'title' => $title
+        ];
+        $pdf = Pdf::loadView('pdf.report', $data);
+        return $pdf->download($fileName);
         // $pdf = Pdf::loadHTML('transaction', $transaction->toArray());
         // return $pdf->download($fileName);
     }
@@ -129,8 +141,17 @@ class TransactionController extends Controller
         $persentaseIn = ($countCashIn / $totalLingkaran) * 100;
         $persentaseOut = ($countCashOut / $totalLingkaran) * 100;
 
-        $cashIn = $query->where('cash_out', '0')->pluck('amount', 'created_at');
-        $cashOut = $query->where('cash_out', '1')->pluck('amount', 'created_at');
+        // $cashIn = $query->where('cash_out', '0')
+        //     ->whereYear('created_at', 2023)
+        //     ->select(DB::raw('SUM(amount) as monthylAmount'))
+        //     ->groupByRaw('MONTH(created_at)')
+        //     ->pluck('amount', 'created_at');
+
+        // $cashOut = $query->where('cash_out', '1')
+        //     ->whereYear('created_at', 2023)
+        //     ->select(DB::raw('SUM(amount) as monthylAmount'))
+        //     ->groupByRaw('MONTH(created_at)')
+        //     ->pluck('amount', 'created_at');
 
         // $cash = $query->where('cash_out', '0')->groupBy(DB::raw('MONTH(created_at)'));
         // dd($cash);
@@ -141,8 +162,8 @@ class TransactionController extends Controller
                 'totalCashOut' => $totalCashOut,
                 'persentaseIn' => $persentaseIn,
                 'persentaseOut' => $persentaseOut,
-                'cashIn' => $cashIn,
-                'cashOut' => $cashOut
+                // 'cashIn' => $cashIn,
+                // 'cashOut' => $cashOut
             ]
         ]);
     }
@@ -201,9 +222,9 @@ class TransactionController extends Controller
 
             $this->decreaseMoney($wallet, $validated['amount']);
             $transaction->purposable()->associate($purposable);
-            if ($request->hasFile('receipt')){
+            if ($request->hasFile('receipt')) {
                 $path = $request->file('receipt')->store($transaction->getDirName());
-            
+
                 $transaction->receipt = $path;
             }
         } else {

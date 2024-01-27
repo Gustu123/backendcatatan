@@ -68,7 +68,9 @@ class DebtController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $debt = Debt::find($id);
+
+        return response()->json(["data" => $debt]);
     }
 
     /**

@@ -58,7 +58,9 @@ class WalletController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $wallet = Wallet::find($id);
+
+        return response()->json(["data" => $wallet]);
     }
 
     /**
